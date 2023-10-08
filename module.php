@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace JustCarmen\Webtrees\Module\SimpleMenu;
+namespace Bwong\Webtrees\Module\FavoritesMenu;
 
 use Fisharebest\Webtrees\Module\UserFavoritesModule;
 use Fisharebest\Webtrees\Auth;
