@@ -39,7 +39,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
 
     // Module constants
     public const CUSTOM_AUTHOR = 'Bwong789';
-    public const CUSTOM_VERSION = '1.1';
+    public const CUSTOM_VERSION = '1.2';
     public const GITHUB_REPO = 'webtrees-favorites-menu';
     public const AUTHOR_WEBSITE = 'https://github.com/bwong789'; //'https://none.com';
     public const CUSTOM_SUPPORT_URL = 'https://github.com/bwong789/webtrees-favorites-menu/issues'; //self::AUTHOR_WEBSITE . '/none/';
@@ -62,7 +62,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
      */
     public function description(): string
     {
-        /* I18N: Description of the â€œFavorites Menuâ€� module */
+        /* I18N: Description of the “Favorites Menu” module */
         return I18N::translate('Manage favorites based on current page.');
     }
 
@@ -160,95 +160,96 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
         $uri = $_SERVER['REQUEST_URI'];
         $path = explode('/',$uri);
         $tree_index = array_search('tree',$path);
-        if ((FALSE === $tree_index) || (count($path) < (4 + $tree_index))) {
+        if (FALSE === $tree_index) {
           return null;
         }
-        $type = $path[$tree_index + 2];
-        switch ($type) {
-            case 'individual':
-              $gedcom_type = 'INDI';
-              break;
-            case 'family':
-              $gedcom_type = 'FAM';
-              break;
-            case 'media':
-              $gedcom_type = 'OBJE';
-              break;
-            default:
-              return null;
-        }
-        $xref = $path[$tree_index + 3];
-
-        $gedcom = DB::table('gedcom')
-            ->where('gedcom_name', '=', $tree_name)
-            ->get()
-            ->toArray();
-
-        if (!$gedcom) {
-          // Cannot find gedcom family record.
-          return null;
+        if (count($path) >= (4 + $tree_index)) {
+          $type = $path[$tree_index + 2];
+          switch ($type) {
+              case 'individual':
+                $gedcom_type = 'INDI';
+                break;
+              case 'family':
+                $gedcom_type = 'FAM';
+                break;
+              case 'media':
+                $gedcom_type = 'OBJE';
+                break;
+              default:
+                $gedcom_type = '';
+                break;
+          }
+          $xref = $path[$tree_index + 3];
+        } else {
+          $gedcom_type = '';
         }
 
-        // Get current favorites setting.
-        $result = DB::table('favorite')
-            ->where('gedcom_id', '=', $gedcom[0]->gedcom_id)
+        // Get current favorites setting. 
+        if ($gedcom_type) {
+          $result = DB::table('favorite')
+            ->where('gedcom_id', '=', $tree->id())
             ->where('user_id', '=', $user_id)
             ->where('favorite_type', '=', $gedcom_type)
             ->where('xref', '=', $xref)
             ->get()
             ->toArray();
 
-        // Check if favorite status change requested.
-        $parameters = explode('&',$_SERVER['QUERY_STRING']);
-        $args = [];
-        foreach ($parameters as $i => $value) {
-          switch ($value) {
-            case 'favorites-menu-true':
-              if (!$result) {
-                // Add to favorites.
-                DB::table('favorite')->insert([
-                  'gedcom_id' => $gedcom[0]->gedcom_id,
-                  'user_id' => $user_id,
-                  'favorite_type' => $gedcom_type,
-                  'xref' => $xref]);
-                $result = TRUE;
-              }
-              break;
-            case 'favorites-menu-false':
-              if ($result) {
-                // Remove from favorites.
-                DB::table('favorite')
-                  ->where('gedcom_id', '=', $gedcom[0]->gedcom_id)
-                  ->where('user_id', '=', $user_id)
-                  ->where('favorite_type', '=', $gedcom_type)
-                  ->where('xref', '=', $xref)
-                  ->delete();
-                $result = FALSE;
-              }
-              break;
-            case '':
-              // Clean up any empty parameters.
-              unset($parameters[$i]);
-              break;
-            default:
-              $args[] = $value;
-              break;
+          // Check if favorite status change requested.
+          $parameters = explode('&',$_SERVER['QUERY_STRING']);
+          $args = [];
+          foreach ($parameters as $i => $value) {
+            switch ($value) {
+              case 'favorites-menu-true':
+                if (!$result) {
+                  // Add to favorites.
+                  DB::table('favorite')->insert([
+                    'gedcom_id' => $tree->id(),
+                    'user_id' => $user_id,
+                    'favorite_type' => $gedcom_type,
+                    'xref' => $xref]);
+                  $result = TRUE;
+                }
+                break;
+              case 'favorites-menu-false':
+                if ($result) {
+                  // Remove from favorites.
+                  DB::table('favorite')
+                    ->where('gedcom_id', '=', $tree->id())
+                    ->where('user_id', '=', $user_id)
+                    ->where('favorite_type', '=', $gedcom_type)
+                    ->where('xref', '=', $xref)
+                    ->delete();
+                  $result = FALSE;
+                }
+                break;
+              case '':
+                // Clean up any empty parameters.
+                unset($parameters[$i]);
+                break;
+              default:
+                $args[] = $value;
+                break;
+            }
           }
-        }
 
-        // Setup display and url parameter.
-        if ($result) {
-            $class = 'favorites-menu-true';
-            $prefix = '[*] ';
-            $args[] = 'favorites-menu-false';
-            $action = 'Remove from favorites';
+          // Setup display and url parameter. 
+          if ($result) {
+              $class = 'favorites-menu-true';
+              $prefix = '[*] ';
+              $args[] = 'favorites-menu-false';
+              $action = 'Remove from favorites';
+          } else {
+              $class = 'favorites-menu-false';
+              $prefix = '[ ] ';
+              $args[] = 'favorites-menu-true';
+              $action = 'Make favorite';
+          }
         } else {
-            $class = 'favorites-menu-false';
-            $prefix = '[ ] ';
-            $args[] = 'favorites-menu-true';
-            $action = 'Make favorite';
+          $class = 'favorites-menu-false';
+          $prefix = '';
+          $args = [];
+          $action = '';
         }
-
 
         // Generate parameters.
         if ($args) {
@@ -258,8 +259,10 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
         }
 
         // Set up submenu.
-        $my_url = explode('?',$uri)[0];
-        $submenu[] = new Menu('-- '.I18N::translate($action).' --', e("$my_url$args"), 'favorites-menu-action');
+        if ($action) {
+          $my_url = explode('?',$uri)[0];
+          $submenu[] = new Menu('-- '.I18N::translate($action).' --', e("$my_url$args"), 'favorites-menu-action');
+        }
 
         // Get current favorites setting.
         $favorites = (new UserFavoritesModule())->getFavorites($tree,$user);
@@ -272,10 +275,10 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
         }
 
         foreach ($favorites as $favorite) {
-          $type = $favorite->favorite_type;
-          $name = $type . ': ' . $favorite->record->fullName();
+          $ftype = $favorite->favorite_type;
+          $name = $ftype . ': ' . $favorite->record->fullName();
           $id = $favorite->xref;
-          switch ($type) {
+          switch ($ftype) {
             case 'INDI':
               $url = "individual/$id";
               break;
@@ -286,7 +289,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
               $url = "media/$id";
               break;
           }
-          $submenu[] = new Menu($name, e( "$url_prefix/tree/$tree_name/". $url), "favorites-menu-$type favorites-menu-item");
+          $submenu[] = new Menu($name, e( "$url_prefix/tree/$tree_name/". $url), "favorites-menu-$ftype favorites-menu-item");
         }
 
         // Strip old arguments.
@@ -320,6 +323,6 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
      */
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
-      return null; // Should never be called.
+      return null; // Should never be called. 
     }
 };
