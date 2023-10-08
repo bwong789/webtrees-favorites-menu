@@ -37,14 +37,12 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
     use ModuleMenuTrait;
     use ModuleGlobalTrait;
 
-    protected const ROUTE_URL   = '/tree/{tree}/favoritesMenu/{menu}';
-
-     // Module constants
-    public const CUSTOM_AUTHOR = 'Bwong';
-    public const CUSTOM_VERSION = '1.0';
-    public const GITHUB_REPO = 'none';
-    public const AUTHOR_WEBSITE = ''; //'https://none.com';
-    public const CUSTOM_SUPPORT_URL = ''; //self::AUTHOR_WEBSITE . '/none/';
+    // Module constants
+    public const CUSTOM_AUTHOR = 'Bwong789';
+    public const CUSTOM_VERSION = '1.1';
+    public const GITHUB_REPO = 'webtrees-favorites-menu';
+    public const AUTHOR_WEBSITE = 'https://github.com/bwong789'; //'https://none.com';
+    public const CUSTOM_SUPPORT_URL = 'https://github.com/bwong789/webtrees-favorites-menu/issues'; //self::AUTHOR_WEBSITE . '/none/';
 
     /**
      * How should this module be identified in the control panel, etc.?
@@ -64,7 +62,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
      */
     public function description(): string
     {
-        /* I18N: Description of the “Favorites Menu” module */
+        /* I18N: Description of the â€œFavorites Menuâ€� module */
         return I18N::translate('Manage favorites based on current page.');
     }
 
@@ -120,11 +118,6 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
      */
     public function boot(): void
     {
-        Registry::routeFactory()->routeMap()
-            ->get(static::class, static::ROUTE_URL, $this);
-
-        // Register a namespace for our views.
-        View::registerNamespace($this->name(), $this->resourcesFolder() . 'views/');
     }
 
      /**
@@ -196,7 +189,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
           return null;
         }
 
-        // Get current favorites setting. 
+        // Get current favorites setting.
         $result = DB::table('favorite')
             ->where('gedcom_id', '=', $gedcom[0]->gedcom_id)
             ->where('user_id', '=', $user_id)
@@ -243,7 +236,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
           }
         }
 
-        // Setup display and url parameter. 
+        // Setup display and url parameter.
         if ($result) {
             $class = 'favorites-menu-true';
             $prefix = '[*] ';
@@ -327,6 +320,6 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
      */
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
-      return null; // Should never be called. 
+      return null; // Should never be called.
     }
 };
