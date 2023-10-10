@@ -42,7 +42,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
 
     // Module constants
     public const CUSTOM_AUTHOR = 'Bwong789';
-    public const CUSTOM_VERSION = '1.3';
+    public const CUSTOM_VERSION = '1.4';
     public const GITHUB_REPO = 'webtrees-favorites-menu';
 
     public const AUTHOR_WEBSITE = 'https://github.com/bwong789'; //'https://none.com';
@@ -387,11 +387,6 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
           $url_prefix = '';
         }
 
-        $submenu[] = new Menu(
-           I18N::translate('Manage favorites'),
-           e( "$url_prefix/tree/$tree_name/favorites-menu"),
-           "favorites-menu-manage favorites-menu-item");
-
         $group = $this->getGroup($user_id);
         $submenu[] = new Menu(
            htmlspecialchars($group),
@@ -548,7 +543,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
               ->where('note', '=', null)
               ->update(['note' => $params['rename_default']]);
             if (!$default_group) {
-              $default_group = $params['rename_default'];
+              $active_group = $params['rename_default'];
             }
           }
  
@@ -562,13 +557,14 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
           foreach ($params['group'] as $id => $group) {
             $group = htmlspecialchars_decode($group);
             $group_data = $this->getFavorite($id);
-            if ($group_data->note != $group) {
+            $old_group = $group_data->note ? $group_data->note : '';
+            if ($old_group != $group) {
               DB::table('favorite')
                   ->where('gedcom_id', '=', $tree->id())
                   ->where('user_id', '=', $user_id)
                   ->where('note', '=', $group_data->note)
                   ->update(['note' => ($group ? $group : null)]);
-              if ($default_group == $group_data->note) {
+              if ($old_group == $default_group) {
                 $default_group = $group;
               }
             }

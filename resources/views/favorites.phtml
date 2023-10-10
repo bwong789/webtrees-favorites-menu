@@ -4,14 +4,20 @@ use Fisharebest\Webtrees\Http\RequestHandlers\ControlPanel;
 use Fisharebest\Webtrees\Http\RequestHandlers\ModulesFootersPage;
 use Fisharebest\Webtrees\I18N;
 
-$groups[''] = [];
+$groups[''] = ['count' => 0];
 foreach($favorites as $favorite) {
-  $groups[$favorite['group']] = [
-    $favorite['type'] => $favorite,
-    'id' => $favorite['favorite_id'],
-  ];
+  $group = $favorite['group'];
+  if (isset($groups[$group])) {
+    $groups[$group]['count'] += 1;
+  } else {
+    $groups[$group] = [
+      $favorite['type'] => $favorite,
+      'id' => $favorite['favorite_id'],
+      'count' => 1,
+    ];
+  }
 }
-
+$item_text = I18N::translate('favorite(s)');
 ?>
 
 <?= view('components/breadcrumbs', ['links' => [route(ControlPanel::class) => I18N::translate('Control panel'), route(ModulesFootersPage::class) => I18N::translate('Footers'), $title]]) ?>
@@ -26,11 +32,14 @@ foreach($favorites as $favorite) {
   <h3><?php echo I18N::translate('Groups') ?></h3>
   <input type="radio" name="active_group" value="0" <?php if (!$default_group) echo 'checked'; ?> >
   <input type="text" name="rename_default" value="" size="60" placeholder="[ ] <?= I18N::translate('Rename the default group') ?>">
-    <br>
+  &nbsp;<?= $groups['']['count'] ?> <?= $item_text ?>
+  <br>
   <?php foreach ($groups as $group => $item) { ?>
     <?php if ($group) { ?>
       <input type="radio" name="active_group" value="<?= $item['id'] ?>" <?php if ($group == $default_group) echo 'checked'; ?> >
-      <input type="text" name="group[<?= $item['id'] ?>]" value="<?= htmlspecialchars($group) ?>" size="60"><br>
+      <input type="text" name="group[<?= $item['id'] ?>]" value="<?= htmlspecialchars($group) ?>" size="60">
+      &nbsp;<?= $item['count'] ?> <?= $item_text ?>
+      <br>
     <?php } ?>
   <?php } ?>
 
