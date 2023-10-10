@@ -1,3 +1,36 @@
+.favorites-menu-group::before {
+  content: "-- Group: [";
+}
+.favorites-menu-group::after {
+  content: "] --";
+}
+
+.favorites-menu-false-item::before {
+  margin-left: 0.5em;
+  content: "\025a3";
+}
+.favorites-menu-true-item::before {
+  margin-left: 0.5em;
+  content: "\025a2";
+}
+.favorites-menu-move-item::before {
+  margin-left: 0.5em;
+  content: "\025a3";
+}
+
+.favorites-menu-INDI::before {
+  content: "\1f464";
+}
+.favorites-menu-FAM::before {
+  content: "\1f46a";
+}
+.favorites-menu-OBJE::before {
+  content: "\1f5ba";
+}
+.favorites-menu-URL::before {
+  content: "\1f517";
+}
+
 .wt-theme-minimal .favorites-menu-true .nav-link::before,
 .wt-theme-minimal .favorites-menu-false .nav-link::before,
 .wt-theme-minimal .favorites-menu-empty .nav-link::before,

@@ -2,9 +2,8 @@
 
 declare(strict_types=1);
 
-namespace Bwong\Webtrees\Module\FavoritesMenu;
+namespace favorites_menu\Webtrees\Module\FavoritesMenu;
 
-use Fisharebest\Webtrees\Module\UserFavoritesModule;
 use Fisharebest\Webtrees\Auth;
 use Fisharebest\Webtrees\I18N;
 use Fisharebest\Webtrees\Menu;
@@ -25,8 +24,10 @@ use Fisharebest\Webtrees\Module\ModuleGlobalTrait;
 use Fisharebest\Webtrees\Module\ModuleGlobalInterface;
 use Fisharebest\Webtrees\Module\ModuleConfigInterface;
 use Fisharebest\Webtrees\Module\ModuleCustomInterface;
+use Fisharebest\Webtrees\Module\UserFavoritesModule;
 use Fisharebest\Webtrees\Http\RequestHandlers\ModulesMenusAction;
 use Illuminate\Database\Capsule\Manager as DB;
+use Fig\Http\Message\RequestMethodInterface;
 
 /**
  * Anonymous class - provide a custom menu option
@@ -37,10 +38,13 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
     use ModuleMenuTrait;
     use ModuleGlobalTrait;
 
+    protected const ROUTE_URL = '/tree/{tree}/favorites-menu';
+
     // Module constants
     public const CUSTOM_AUTHOR = 'Bwong789';
-    public const CUSTOM_VERSION = '1.2';
+    public const CUSTOM_VERSION = '1.3';
     public const GITHUB_REPO = 'webtrees-favorites-menu';
+
     public const AUTHOR_WEBSITE = 'https://github.com/bwong789'; //'https://none.com';
     public const CUSTOM_SUPPORT_URL = 'https://github.com/bwong789/webtrees-favorites-menu/issues'; //self::AUTHOR_WEBSITE . '/none/';
 
@@ -118,6 +122,12 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
      */
     public function boot(): void
     {
+        Registry::routeFactory()->routeMap()
+            ->get(static::class, static::ROUTE_URL, $this)
+            ->allows(RequestMethodInterface::METHOD_POST);
+
+        // Register a namespace for our views.
+        View::registerNamespace($this->name(), $this->resourcesFolder() . 'views/');
     }
 
      /**
@@ -138,6 +148,94 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
     public function defaultMenuOrder(): int
     {
         return 99;
+    }
+
+    /**
+     * Get all favorites.
+     *
+     * @param User $user
+     * @param Tree $tree
+     *
+     * @return array
+     *   Array of arrays with keys: group, title, type, url.
+     */
+    public function getFavorites($user, Tree $tree):array {
+      $uri = $_SERVER['REQUEST_URI'];
+      $path = explode('/',$uri);
+      $tree_index = array_search('tree',$path);
+      $tree_name = $tree->name();
+      $user_id = $user->id();
+
+      $path_prefix = array_slice($path,0,$tree_index);
+      if ($path_prefix) {
+        $url_prefix = implode('/',array_slice($path,0,$tree_index));
+      } else {
+        $url_prefix = '';
+      }
+
+      $result = [];
+      $favorites = (new UserFavoritesModule())->getFavorites($tree,$user);
+      foreach ($favorites as $favorite) {
+        $ftype = $favorite->favorite_type;
+        if ($ftype != 'URL') {
+          $id = $favorite->xref;
+          switch ($ftype) {
+            case 'INDI':
+              $url = "individual/$id";
+              break;
+            case 'FAM':
+              $url = "family/$id";
+              break;
+            case 'OBJE':
+              $url = "media/$id";
+              break;
+          }
+          $result[] = [
+            'favorite_id' => $favorite->favorite_id,
+            'title' => $favorite->record->fullName(),
+            'type' => $ftype,
+            'url' => "$url_prefix/tree/$tree_name/". $url,
+            'group' => $favorite->note ? $favorite->note : '',
+            'xref' => $favorite->xref];
+        }
+      }
+
+      // Get any URL entries.
+      $url_favorites = DB::table('favorite')
+            ->where('gedcom_id', '=', $tree->id())
+            ->where('user_id', '=', $user->id())
+            ->where('favorite_type', '=', 'URL')
+            ->get()
+            ->all();
+
+      foreach($url_favorites as $url_favorite) {
+        $result[] = [
+          'favorite_id' => $url_favorite->favorite_id,
+          'title' => $url_favorite->title,
+          'type' => 'URL',
+          'url' => $url_favorite->url,
+          'group' => $url_favorite->note ? $url_favorite->note : '',
+          'xref' => '',
+        ];
+      }
+
+      return $result;
+    }
+
+    /**
+     * Get one favorite.
+     *
+     * @param integer $favorite_id
+     *
+     * @return object|null
+     *   Favorite record data.
+     */
+    public function getFavorite($favorite_id) {
+      $result = DB::table('favorite')
+         ->where('favorite_id', '=', $favorite_id)
+         ->get()
+         ->toArray();
+      return $result ? $result[0] : null;
     }
 
     /**
@@ -184,6 +282,9 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
           $gedcom_type = '';
         }
 
+        $group = $this->getGroup($user_id);
+
+
         // Get current favorites setting. 
         if ($gedcom_type) {
           $result = DB::table('favorite')
@@ -194,11 +295,24 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
             ->get()
             ->toArray();
 
-          // Check if favorite status change requested.
+          $my_group = $result ? $result[0]->note : '';
           $parameters = explode('&',$_SERVER['QUERY_STRING']);
           $args = [];
           foreach ($parameters as $i => $value) {
             switch ($value) {
+              case 'favorites-menu-move':
+                // Change group
+                DB::table('favorite')
+                    ->where('gedcom_id', '=', $tree->id())
+                    ->where('user_id', '=', $user_id)
+                    ->where('favorite_type', '=', $gedcom_type)
+                    ->where('xref', '=', $xref)
+                    ->update(['note' => ($group ? $group : null)]);
+                FlashMessages::addMessage(
+                    I18N::translate('Favorite moved to group: ') .
+                    "[$group]");
+                $my_group = $group;
+                break;
               case 'favorites-menu-true':
                 if (!$result) {
                   // Add to favorites.
@@ -206,7 +320,8 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
                     'gedcom_id' => $tree->id(),
                     'user_id' => $user_id,
                     'favorite_type' => $gedcom_type,
-                    'xref' => $xref]);
+                    'xref' => $xref,
+                    'note' => ($group ? $group : null)]);
                   $result = TRUE;
                 }
                 break;
@@ -234,15 +349,20 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
 
           // Setup display and url parameter. 
           if ($result) {
+              if ($group != $my_group) {
+                $move_args = $args;
+                $move_args[] = 'favorites-menu-move';
+                $move_args = '?' . implode('&',$move_args);
+              }
               $class = 'favorites-menu-true';
               $prefix = '[*] ';
               $args[] = 'favorites-menu-false';
-              $action = 'Remove from favorites';
+              $action = 'Remove favorite';
           } else {
               $class = 'favorites-menu-false';
               $prefix = '[ ] ';
               $args[] = 'favorites-menu-true';
-              $action = 'Make favorite';
+              $action = 'Add favorite';
           }
         } else {
           $class = 'favorites-menu-false';
@@ -258,15 +378,8 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
           $args = '';
         }
 
-        // Set up submenu.
-        if ($action) {
-          $my_url = explode('?',$uri)[0];
-          $submenu[] = new Menu('-- '.I18N::translate($action).' --', e("$my_url$args"), 'favorites-menu-action');
-        }
 
-        // Get current favorites setting.
-        $favorites = (new UserFavoritesModule())->getFavorites($tree,$user);
-
+        // Generate submenu.
         $path_prefix = array_slice($path,0,$tree_index);
         if ($path_prefix) {
           $url_prefix = implode('/',array_slice($path,0,$tree_index));
@@ -274,25 +387,45 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
           $url_prefix = '';
         }
 
-        foreach ($favorites as $favorite) {
-          $ftype = $favorite->favorite_type;
-          $name = $ftype . ': ' . $favorite->record->fullName();
-          $id = $favorite->xref;
-          switch ($ftype) {
-            case 'INDI':
-              $url = "individual/$id";
-              break;
-            case 'FAM':
-              $url = "family/$id";
-              break;
-            case 'OBJE':
-              $url = "media/$id";
-              break;
+        $submenu[] = new Menu(
+           I18N::translate('Manage favorites'),
+           e( "$url_prefix/tree/$tree_name/favorites-menu"),
+           "favorites-menu-manage favorites-menu-item");
+
+        $group = $this->getGroup($user_id);
+        $submenu[] = new Menu(
+           htmlspecialchars($group),
+           e( "$url_prefix/tree/$tree_name/favorites-menu"),
+           "favorites-menu-group favorites-menu-item");
+
+        if ($action) {
+          $my_url = explode('?',$uri)[0];
+          $submenu[] = new Menu(
+            I18N::translate($action),
+            e("$my_url$args"),
+            $class . '-item favorites-menu-action favorites-menu-item');
+          if (isset($move_args)) {
+            $submenu[] = new Menu(
+              I18N::translate('Move from')." [$my_group]",
+              e("$my_url$move_args"),
+              'favorites-menu-move-item favorites-menu-action favorites-menu-item');
           }
-          $submenu[] = new Menu($name, e( "$url_prefix/tree/$tree_name/". $url), "favorites-menu-$ftype favorites-menu-item");
         }
 
-        // Strip old arguments.
+        $default_group = $this->getGroup($user_id);
+
+        $favorites = $this->getFavorites($user, $tree);
+        foreach(['INDI', 'FAM', 'OBJE', 'URL', 'NOTE', 'SOUR', 'REPO' ] as $type) {
+          foreach($this->getFavorites($user, $tree) as $favorite) {
+            if (($type == $favorite['type']) && ($default_group == $favorite['group'])) {
+              $submenu[] = new Menu(
+                $favorite['title'],
+                e($favorite['url']),
+                "favorites-menu-$type favorites-menu-item");
+            }
+          }
+        }
+
         $uri = explode('?',$uri)[0];
         return new Menu($prefix . I18N::translate('Favorite'), '#', $class, ['rel' => 'nofollow'], $submenu);
     }
@@ -317,12 +450,140 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
     }
 
     /**
+     * Get default group
+     *
+     * @param integer $user_id
+     *
+     * @return string
+     */
+    public function getGroup($user_id): string {
+      $result = DB::table('user_setting')
+            ->where('setting_name', '=', 'favorites-menu-default')
+            ->where('user_id', '=', $user_id)
+            ->get()
+            ->toArray();
+
+      return $result ? $result[0]->setting_value : '';
+    }
+
+    /**
+     * Set default group
+     *
+     * @param integer $user_id
+     * @param string  $group
+     */
+    public function setGroup($user_id, $group) {
+      // Check if entry is in the table.
+      $result = DB::table('user_setting')
+            ->where('setting_name', '=', 'favorites-menu-default')
+            ->where('user_id', '=', $user_id)
+            ->get()
+            ->toArray();
+
+      if ($result) {
+        $result = DB::table('user_setting')
+               ->where('setting_name', '=', 'favorites-menu-default')
+               ->where('user_id', '=', $user_id)
+               ->update(['setting_value' => $group]);
+      } else {
+        $result = DB::table('user_setting')->insert([
+                    'user_id' => $user_id,
+                    'setting_name' => $gedcom_type,
+                    'setting_value' => $group]);
+      }
+    }
+
+
+    /**
      * @param ServerRequestInterface $request
      *
      * @return ResponseInterface
      */
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
-      return null; // Should never be called. 
+        $user = Auth::user();
+        $user_id = $user->id();
+
+
+        $tree = $request->getAttribute('tree');
+        assert($tree instanceof Tree);
+
+        $default_group = $this->getGroup($user_id);
+
+        // Handle POST request.
+        if ($request->getMethod() === RequestMethodInterface::METHOD_POST) {
+          // Check radio buttons.
+          $params = (array) $request->getParsedBody();
+          $active_group = $params['active_group'];
+
+          if ($params['new_group'] && $params['default_group']) {
+            // Ignore radio selection if new group entered
+            $active_group = $params['default_group'];
+          } else {
+            switch($active_group) {
+              case 0:
+                $active_group = '';
+                break;
+              case -1:
+                $active_group = $params['default_group'];
+                break;
+              default:
+                $record = $this->getFavorite($active_group);
+                $active_group = $record ? ( $record->note ? $record->note : '' ) : '';
+                break;
+            }
+          }
+
+          // Handle default group rename.
+          if ($params['rename_default']) {
+            // Blank and null are the default group. 
+            DB::table('favorite')
+              ->where('gedcom_id', '=', $tree->id())
+              ->where('user_id', '=', $user_id)
+              ->where('note', '=', '')
+              ->update(['note' => $params['rename_default']]);
+            DB::table('favorite')
+              ->where('gedcom_id', '=', $tree->id())
+              ->where('user_id', '=', $user_id)
+              ->where('note', '=', null)
+              ->update(['note' => $params['rename_default']]);
+            if (!$default_group) {
+              $default_group = $params['rename_default'];
+            }
+          }
+ 
+          // Update default group. 
+          if ($default_group != $active_group) {
+            $default_group = $active_group; 
+            $this->setGroup($user_id, $default_group);
+          }
+
+          // Make any group name changes.
+          foreach ($params['group'] as $id => $group) {
+            $group = htmlspecialchars_decode($group);
+            $group_data = $this->getFavorite($id);
+            if ($group_data->note != $group) {
+              DB::table('favorite')
+                  ->where('gedcom_id', '=', $tree->id())
+                  ->where('user_id', '=', $user_id)
+                  ->where('note', '=', $group_data->note)
+                  ->update(['note' => ($group ? $group : null)]);
+              if ($default_group == $group_data->note) {
+                $default_group = $group;
+              }
+            }
+          }
+
+          FlashMessages::addMessage(I18N::translate('Settings saved'));
+        }
+
+        return $this->viewResponse($this->name() . '::favorites', [
+            'tree'          => $tree,
+            'title'         => I18N::translate('Favorites Menu Settings'),
+            'module'        => $this->name(),
+            'is_admin'      => Auth::isAdmin(),
+            'default_group' => $default_group,
+            'favorites'     => $this->getFavorites($user, $tree),
+        ]);
     }
 };
