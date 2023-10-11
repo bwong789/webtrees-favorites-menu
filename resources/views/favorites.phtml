@@ -4,31 +4,20 @@ use Fisharebest\Webtrees\Http\RequestHandlers\ControlPanel;
 use Fisharebest\Webtrees\Http\RequestHandlers\ModulesFootersPage;
 use Fisharebest\Webtrees\I18N;
 
-$groups[''] = ['count' => 0];
-foreach($favorites as $favorite) {
-  $group = $favorite['group'];
-  if (isset($groups[$group])) {
-    $groups[$group]['count'] += 1;
-  } else {
-    $groups[$group] = [
-      $favorite['type'] => $favorite,
-      'id' => $favorite['favorite_id'],
-      'count' => 1,
-    ];
-  }
-}
 $item_text = I18N::translate('favorite(s)');
+
 ?>
 
 <?= view('components/breadcrumbs', ['links' => [route(ControlPanel::class) => I18N::translate('Control panel'), route(ModulesFootersPage::class) => I18N::translate('Footers'), $title]]) ?>
 
 <h1><?= $title ?></h1>
-
+<div class='favorites-menu-form'>
 <form  method="post">
   <?= csrf_field() ?>
   <label><?= I18N::translate('Make any changes and then click') ?></label> 
   <input type="submit" value="<?= I18N::translate('Save') ?>"><br>
 
+  <div class="favorites-menu-active-group">
   <h3><?php echo I18N::translate('Groups') ?></h3>
   <input type="radio" name="active_group" value="0" <?php if (!$default_group) echo 'checked'; ?> >
   <input type="text" name="rename_default" value="" size="60" placeholder="[ ] <?= I18N::translate('Rename the default group') ?>">
@@ -42,18 +31,41 @@ $item_text = I18N::translate('favorite(s)');
       <br>
     <?php } ?>
   <?php } ?>
+  </div>
 
+  <div class="favorites-menu-new-group">
   <?php if (isset($groups[$default_group])) { ?>
     <input type="radio" name="active_group" value="-1">
-    <input type="text" name="default_group" value="" size="60" placeholder="<?php echo I18N::translate('Enter new group') ?>">
+    <input type="text" name="default_group" value="" size="60" placeholder="<?= I18N::translate('Enter new group') ?>">
     <input type="hidden" name="new_group" value="1">
   <?php } else { ?>
     <input type="radio" name="active_group" value="-1" checked>
     <input type="text" name="default_group" value="<?= htmlspecialchars($default_group) ?>" size="60">
     <input type="hidden" name="new_group" value="0">
   <?php } ?>
+  </div>
   <br>
+
+  <?php foreach ($groups as $title => $group) { ?>
+    <div class='favorites-menu-form-group'>
+    <h3><?= I18N::translate('Group')?>: <?= $title ? $title : '[ ]' ?></h3>
+    <?= I18N::translate('Select to move or check to remove a favorite.') ?><br>
+    <?php foreach ($group['favorites'] as $type => $favorites) { ?>
+      <?php foreach ($favorites as $favorite) { ?>
+        <?= $my_this->getGroupSelect($groups,$title,$favorite['favorite_id']) ?>&nbsp;
+        <input type="checkbox" name="delete[<?= $favorite['favorite_id'] ?>]" value="<?= $favorite['xref'] ?>"> 
+        <a class="favorites-menu-<?= $type ?>" href="<?= $favorite['url'] ?>"> <?= $favorite['title'] ?></a><br>
+      <?php } ?>
+    <?php } ?>
+      <div class="favorites-menu-add-link">
+      <?= I18N::translate('Add new link.') ?><br>  
+      <input type="text" name="text[<?= $group['md5'] ?>]" size="30" placeholder="<?= I18N::translate('Text') ?>">
+      <input type="text" name="url[<?= $group['md5'] ?>]" size="30" placeholder="<?= I18N::translate('URL') ?>">
+      </div>
+    </div>
+    <br>
+  <?php } ?>
 </form>
 <br>
-<?php if(isset($debug)) echo htmlspecialchars(print_r($debug,true)); ?>
+</div>
 

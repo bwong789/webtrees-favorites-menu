@@ -42,7 +42,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
 
     // Module constants
     public const CUSTOM_AUTHOR = 'Bwong789';
-    public const CUSTOM_VERSION = '1.4';
+    public const CUSTOM_VERSION = '1.5';
     public const GITHUB_REPO = 'webtrees-favorites-menu';
 
     public const AUTHOR_WEBSITE = 'https://github.com/bwong789'; //'https://none.com';
@@ -175,8 +175,11 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
 
       $result = [];
       $favorites = (new UserFavoritesModule())->getFavorites($tree,$user);
+
+
       foreach ($favorites as $favorite) {
         $ftype = $favorite->favorite_type;
+
         if ($ftype != 'URL') {
           $id = $favorite->xref;
           switch ($ftype) {
@@ -190,7 +193,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
               $url = "media/$id";
               break;
           }
-          $result[] = [
+          $result[$favorite->favorite_id] = [
             'favorite_id' => $favorite->favorite_id,
             'title' => $favorite->record->fullName(),
             'type' => $ftype,
@@ -209,7 +212,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
             ->all();
 
       foreach($url_favorites as $url_favorite) {
-        $result[] = [
+        $result[$url_favorite->favorite_id] = [
           'favorite_id' => $url_favorite->favorite_id,
           'title' => $url_favorite->title,
           'type' => 'URL',
@@ -488,6 +491,43 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
       }
     }
 
+    /**
+     * Generate groups and hashs. 
+     *
+     * Parameter arrays are cleared and regenerated. 
+     *
+     * @param User  $user
+     * @param Tree  $tree
+     * @param array &$favorites
+     * @param array &$groups
+     * @param array &$hash
+     */
+    protected function generateGroups($user, $tree, &$favorites, &$groups, &$hash) {
+        $favorites = $this->getFavorites($user,$tree);
+        $groups[''] = [
+          'count' => 0,
+          'favorites' => [],
+          'md5' => hash('md5','')
+        ];
+        $hash[$groups['']['md5']] = '';
+
+        foreach($favorites as $favorite_id => $favorite) {
+          $group = $favorite['group'];
+          if (isset($groups[$group])) {
+            $groups[$group]['count'] += 1;
+            $groups[$group]['favorites'][$favorite['type']][$favorite_id] = $favorite;
+          } else {
+            $groups[$group] = [
+              $favorite['type'] => $favorite,
+              'id' => $favorite_id,
+              'count' => 1,
+              'md5' => hash('md5',$group),
+              'favorites' => [$favorite['type'] => [$favorite_id => $favorite]],
+            ];
+            $hash[$groups[$group]['md5']] = $group;
+          }
+        }
+    }
 
     /**
      * @param ServerRequestInterface $request
@@ -504,6 +544,12 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
         assert($tree instanceof Tree);
 
         $default_group = $this->getGroup($user_id);
+
+        // Set up for rendering and processing post.
+        $favorites = [];
+        $groups = [];
+        $hash = [];
+        $this->generateGroups($user, $tree, $favorites, $groups, $hash);
 
         // Handle POST request.
         if ($request->getMethod() === RequestMethodInterface::METHOD_POST) {
@@ -547,30 +593,85 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
             }
           }
  
-          // Update default group. 
-          if ($default_group != $active_group) {
-            $default_group = $active_group; 
-            $this->setGroup($user_id, $default_group);
-          }
-
           // Make any group name changes.
           foreach ($params['group'] as $id => $group) {
             $group = htmlspecialchars_decode($group);
-            $group_data = $this->getFavorite($id);
-            $old_group = $group_data->note ? $group_data->note : '';
+            $old_data = $this->getFavorite($id);
+            $old_group = $old_data->note ? $old_data->note : '';
             if ($old_group != $group) {
               DB::table('favorite')
                   ->where('gedcom_id', '=', $tree->id())
                   ->where('user_id', '=', $user_id)
-                  ->where('note', '=', $group_data->note)
+                  ->where('note', '=', $old_data->note)
                   ->update(['note' => ($group ? $group : null)]);
               if ($old_group == $default_group) {
-                $default_group = $group;
+                $active_group = $group;
               }
             }
           }
 
-          FlashMessages::addMessage(I18N::translate('Settings saved'));
+          // Update default group.
+          if ($default_group != $active_group) {
+            $default_group = $active_group;
+            $this->setGroup($user_id, $default_group);
+          }
+
+          // Check deletes.
+          $deleted_titles = [];
+          if (isset($params['delete'])) {
+            foreach($params['delete'] as $favorite_id => $xref) {
+              $deleted_titles[$favorite_id] = $favorites[$favorite_id]['title'];
+              // Remove from favorite.
+              DB::table('favorite')
+                ->where('gedcom_id', '=', $tree->id())
+                ->where('user_id', '=', $user_id)
+                ->where('favorite_id', '=', $favorite_id)
+                ->where('xref', '=', $xref)
+                ->delete();
+            }
+            $status = 
+              I18N::translate('Deleted %s favorite(s).',count($params['delete'])) .
+              '<br><div>' .
+              implode('<br>',$deleted_titles).
+              '</div>' ;
+          } else {
+            $status = '';
+          }
+
+          // Check for moves. Array has empty entries.
+          if (isset($params['move'])) {
+            $move = [];
+            foreach ($params['move'] as $favorite_id => $value) {
+              if ($value && isset($hash[$value]) && !isset($deleted_titles[$favorite_id])) {
+                $group = $hash[$value];
+                $move[] =  I18N::translate(
+                  "%s moved to [%s]",
+                  $favorites[$favorite_id]['title'],
+                  $group ? $group : ' '
+                  );
+
+                DB::table('favorite')
+                    ->where('gedcom_id', '=', $tree->id())
+                    ->where('user_id', '=', $user_id)
+                    ->where('favorite_id', '=', $favorite_id)
+                    ->update(['note' => ($group ? $group : null)]);
+              }
+            }
+            if ($move) {
+              $status .= I18N::translate('Moved %s favorite(s).',count($move)) .
+                '<br><div>' .
+                implode('<br>',$move).
+                '</div>' ;
+
+              // Regenerate arrays that have now changed. 
+              $this->generateGroups($user, $tree, $favorites, $groups, $hash);
+            }
+          }
+
+
+
+          // Show status.
+          FlashMessages::addMessage(I18N::translate('Settings saved.')." $status");
         }
 
         return $this->viewResponse($this->name() . '::favorites', [
@@ -579,7 +680,34 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
             'module'        => $this->name(),
             'is_admin'      => Auth::isAdmin(),
             'default_group' => $default_group,
-            'favorites'     => $this->getFavorites($user, $tree),
+            'favorites'     => $favorites,
+            'my_this'       => $this,
+            'groups'        => $groups,
         ]);
+    }
+
+    /**
+     * Generate an HTML select for group move.
+     *
+     * @param array $groups
+     *   Array of groups.
+     * @param string $current_group
+     *   Name of current group.
+     * @param string $id
+     *
+     * @return string
+     *   String with HTML select definition. 
+     */
+    public function getGroupSelect($groups,$current_group,$id) {
+      $options[] = '<option value>' . I18N::translate('Change to move') . '</option>';
+      foreach($groups as $group => $item) {
+        if ($group != $current_group) {
+          $title = htmlspecialchars($group ? $group : '[ ]');
+          $md5 = $item['md5'];
+          $options[] = "<option value='$md5'>$title</option>";
+        }
+      }
+      $options_string=implode('',$options);
+      echo "<select name='move[$id]'>$options_string</select>";
     }
 };

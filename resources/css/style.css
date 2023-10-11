@@ -1,5 +1,5 @@
 .favorites-menu-group::before {
-  content: "-- Manage: [";
+  content: "-- [";
 }
 .favorites-menu-group::after {
   content: "] --";
