@@ -617,32 +617,32 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
           }
 
           // Check deletes.
-          $deleted_titles = [];
+          $regenerate = FALSE;
+          $deleted = [];
           if (isset($params['delete'])) {
             foreach($params['delete'] as $favorite_id => $xref) {
-              $deleted_titles[$favorite_id] = $favorites[$favorite_id]['title'];
-              // Remove from favorite.
+              $deleted[$favorite_id] = $favorites[$favorite_id]['title']."-$favorite_id-";
+
+              // Remove from favorite. $xref ignored since it is empty for URLs. 
               DB::table('favorite')
                 ->where('gedcom_id', '=', $tree->id())
                 ->where('user_id', '=', $user_id)
                 ->where('favorite_id', '=', $favorite_id)
-                ->where('xref', '=', $xref)
                 ->delete();
             }
-            $status = 
+            $regenerate = TRUE;
+            FlashMessages::addMessage(
               I18N::translate('Deleted %s favorite(s).',count($params['delete'])) .
               '<br><div>' .
-              implode('<br>',$deleted_titles).
-              '</div>' ;
-          } else {
-            $status = '';
+              implode('<br>',$deleted).
+              '</div>');
           }
 
           // Check for moves. Array has empty entries.
           if (isset($params['move'])) {
             $move = [];
             foreach ($params['move'] as $favorite_id => $value) {
-              if ($value && isset($hash[$value]) && !isset($deleted_titles[$favorite_id])) {
+              if ($value && isset($hash[$value]) && !isset($deleted[$favorite_id])) {
                 $group = $hash[$value];
                 $move[] =  I18N::translate(
                   "%s moved to [%s]",
@@ -658,20 +658,43 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
               }
             }
             if ($move) {
-              $status .= I18N::translate('Moved %s favorite(s).',count($move)) .
+              $regenerate = TRUE;
+              FlashMessages::addMessage(
+                I18N::translate('Moved %s favorite(s).',count($move)) .
                 '<br><div>' .
                 implode('<br>',$move).
-                '</div>' ;
-
-              // Regenerate arrays that have now changed. 
-              $this->generateGroups($user, $tree, $favorites, $groups, $hash);
+                '</div>');
             }
           }
 
+          // See if URLs have been added. 
 
+
+          $urls = [];
+          foreach($params['text'] as $key => $value) {
+              if ($value
+               && isset($params['url'][$key])
+               && $params['url'][$key]) {
+                $regenerate = TRUE;
+                $group = $hash[$key];
+                DB::table('favorite')->insert([
+                  'user_id' => $user_id,
+                  'gedcom_id' => $tree->id(),
+                  'title' => $value,
+                  'favorite_type' => 'URL',
+                  'url' => $params['url'][$key],
+                  'note' => ($group ? $group : null)]
+                );
+              }
+          }
+
+          if ($regenerate) {
+            // Regenerate arrays that have now changed. 
+            $this->generateGroups($user, $tree, $favorites, $groups, $hash);
+          }
 
           // Show status.
-          FlashMessages::addMessage(I18N::translate('Settings saved.')." $status");
+          FlashMessages::addMessage(I18N::translate('Settings saved.'));
         }
 
         return $this->viewResponse($this->name() . '::favorites', [
