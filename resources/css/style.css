@@ -1,8 +1,54 @@
+/* Favorites Menu Styles */
+
+.favorites-menu-secondary {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: auto auto;
+  margin-bottom: 1em;
+}
+
+.favorites-menu-groups {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2,min-content) auto;
+  margin-bottom: 1em;
+}
+
+.favorites-menu-active-group {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2,min-content) auto;
+  margin-bottom: 1em;
+}
+
+.favorites-menu-grid-full-row {
+  grid-column-start: 1;
+  grid-column-end: -1;
+}
+
+.favorites-menu-center {
+  display: flex;
+  justify-content: center; 
+}
+
+.favorites-menu-move-option::after {
+  content: " --";
+}
+
+.wt-genealogy-menu .favorites-menu-group {
+  border-top: solid black 2px;
+  border-right: solid black 2px;
+  border-bottom: solid grey 1px;
+  margin-top: 0.4em;
+}
 .favorites-menu-group::before {
-  content: "-- [";
+  content: "\0272a\02001 [";
 }
 .favorites-menu-group::after {
-  content: "] --";
+  content: "]";
+}
+.wt-genealogy-menu .favorites-menu-first-group {
+  margin-top: 0px;
 }
 
 .favorites-menu-false-item::before {
@@ -18,6 +64,10 @@
   content: "\025a3";
 }
 
+.favorites-menu-other-tree::after {
+  content: "\2b50";
+}
+
 .favorites-menu-INDI::before {
   content: "\1f464";
 }
@@ -26,6 +76,12 @@
 }
 .favorites-menu-OBJE::before {
   content: "\1f5ba";
+}
+.favorites-menu-REPO::before {
+  content: "\1f50d";
+}
+.favorites-menu-SOUR::before {
+  content: "\0270E";
 }
 .favorites-menu-URL::before {
   content: "\1f517";
@@ -71,4 +127,5 @@
 
 .favorites-menu-empty .nav-link::before {
   content: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAYAAAByDd+UAAADGnpUWHRSYXcgcHJvZmlsZSB0eXBlIGV4aWYAAHja7ZdbkuQoDEX/WcUsAUkIieVgHhGzg1n+XDCZXVn9mOror4lIEwZbgCR0JGdVGP/8PcNfuDhKDEnNc8k54kolFa548HhfdfcU0+7vl3bm6FUenhMMkWCU+9XzkQ/IGev5yM96qpDrB0VlnInrdaIeRezHwJE/DAndBmI/iupRJHwsp/v9OpZzcft4hLNvHZ/OuO+wuiTGWTNZQp84muWCZ+eYDHHry9HZuKx9et16Pr+Hx1JEnnkISUTPcryUdYvUJUcfJWMdSdmSvCW+4xsDkMEFeF5ObEd8RvMlNo/xJ1f4yrFOOrzgfj6dNAjfTXxKgzyOXD7Ry89xy8PnCdIf495MP3hk6WmYXzwyedqIH7Gue87uc477dDVlHDmfQz1OQmGjnP1aSbC3ZTTDrXi23Qqao1wacqzHFi+0RoUYKCcl6lRpBhr7oVGDj4kHG0bmxrJlDhaFmyzoaTWabMDfxZEYDakikPKc4fhC227Z9ho5LHfCUiYoI2z5zxa+suhXbc5VS0Th1AzdgHmVIdxY5FaPZSBC8wRVd4Af7TUhD1gBQt1hdhywxutWcSl9yy3ZoAXrFONd3GT93r8UJdhWOEMCBDGTKGWKxmxECKQDUKXoLIkvECBV7nCSk6D0jFEEMB2wx2ivZeVbjq8kSCiK0sAGBQpYKSnyx5Ijh6qKJlXNaupatGbJKaDCcra8PrfVxJKpZTNzK1ZdPLl6dnP34rVwEXyNtaAci5dSaoXNCs01h4r1FZKLL7nSpVe+7PKrXLUhfVpq2nKz5q202rlLRx333K17L70OGkilkYaGkYcNH2XUiVybMtPUmadNn2XWJ7VD9bv2G9ToUONNaq2zJzVIze4x7HyBksUMxDgRiNsigITmxSw6pcSL3GIWy/pkKsNJXWw6xUqZU5A0iHXSk903cr/FLeT0S278VXJhoftDcptbGPqB2w+o9fWz3TaxuwpXTKOg+jA/vLLX9Staw+PhT8e3oreit6K3oreit6K3ov+xook/HvAfZfgXru28CFPvDgYAAAGFaUNDUElDQyBwcm9maWxlAAB4nH2RPUjDQBiG36ZqpVQcLCjikKE6WRAVcZQqFsFCaSu06mBy6R80aUhSXBwF14KDP4tVBxdnXR1cBUHwB8TVxUnRRUr8Lim0iPHg7h7e+96Xu+8AoVFhqtk1AaiaZaTiMTGbWxUDrwiiB4O0zkrM1BPpxQw8x9c9fHy/i/Is77o/R5+SNxngE4nnmG5YxBvEM5uWznmfOMxKkkJ8Tjxu0AWJH7kuu/zGueiwwDPDRiY1TxwmFosdLHcwKxkq8TRxRFE1yheyLiuctzirlRpr3ZO/MJTXVtJcpzmCOJaQQBIiZNRQRgUWorRrpJhI0XnMwz/s+JPkkslVBiPHAqpQITl+8D/43VuzMDXpJoViQPeLbX+MAoFdoFm37e9j226eAP5n4Epr+6sNYPaT9HpbixwB/dvAxXVbk/eAyx1g6EmXDMmR/DSFQgF4P6NvygEDt0Bwze1b6xynD0CGerV8AxwcAmNFyl73eHdvZ9/+rWn17weX7nK2vJ3VJgAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+cKBhcQCYI52ecAAAAZdEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIEdJTVBXgQ4XAAAAGklEQVRIx+3BMQEAAADCoPVPbQhfoAAAAH4DDFwAASGpslIAAAAASUVORK5CYII=");
+
 }

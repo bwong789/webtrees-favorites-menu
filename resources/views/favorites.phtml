@@ -15,56 +15,115 @@ $item_text = I18N::translate('favorite(s)');
 <form  method="post">
   <?= csrf_field() ?>
   <label><?= I18N::translate('Make any changes and then click') ?></label> 
-  <input type="submit" value="<?= I18N::translate('Save') ?>"><br>
+  <button name='action' type="submit" value='save'><?= I18N::translate('Save') ?></button>
 
   <div class="favorites-menu-active-group">
-  <h3><?php echo I18N::translate('Groups') ?></h3>
-  <input type="radio" name="active_group" value="0" <?php if (!$default_group) echo 'checked'; ?> >
-  <input type="text" name="rename_default" value="" size="60" placeholder="[ ] <?= I18N::translate('Rename the default group') ?>">
-  &nbsp;<?= $groups['']['count'] ?> <?= $item_text ?>
-  <br>
-  <?php foreach ($groups as $group => $item) { ?>
-    <?php if ($group) { ?>
-      <input type="radio" name="active_group" value="<?= $item['id'] ?>" <?php if ($group == $default_group) echo 'checked'; ?> >
-      <input type="text" name="group[<?= $item['id'] ?>]" value="<?= htmlspecialchars($group) ?>" size="60">
-      &nbsp;<?= $item['count'] ?> <?= $item_text ?>
-      <br>
-    <?php } ?>
-  <?php } ?>
-  </div>
+    <h3 class="favorites-menu-grid-full-row"><?php echo I18N::translate('Groups') ?></h3>
+    <div><?= I18N::translate('Shared') ?></div>
+    <div><?= I18N::translate('Default') ?></div>
+    <div><?= I18N::translate('Group') ?></div>
 
-  <div class="favorites-menu-new-group">
-  <?php if (isset($groups[$default_group])) { ?>
-    <input type="radio" name="active_group" value="-1">
-    <input type="text" name="default_group" value="" size="60" placeholder="<?= I18N::translate('Enter new group') ?>">
-    <input type="hidden" name="new_group" value="1">
-  <?php } else { ?>
-    <input type="radio" name="active_group" value="-1" checked>
-    <input type="text" name="default_group" value="<?= htmlspecialchars($default_group) ?>" size="60">
-    <input type="hidden" name="new_group" value="0">
-  <?php } ?>
-  </div>
-  <br>
+    <div class="favorites-menu-center"><input type="checkbox" name="shared[0]" value="0"
+      <?php if (isset($shared[0])) echo 'checked'; ?>></div>
+    <div class="favorites-menu-center"><input type="radio" name="active_group" value="0" <?php if (!$settings['default_group']) echo 'checked'; ?> ></div>
+    <div><input type="text" name="rename_default" value="" size="60" placeholder="[ ] <?= I18N::translate('Rename the default group') ?>">
+      <?= $groups['']['count'] ?> <?= $item_text ?></div>
 
-  <?php foreach ($groups as $title => $group) { ?>
-    <div class='favorites-menu-form-group'>
-    <h3><?= I18N::translate('Group')?>: <?= $title ? $title : '[ ]' ?></h3>
-    <?= I18N::translate('Select to move or check to remove a favorite.') ?><br>
-    <?php foreach ($group['favorites'] as $type => $favorites) { ?>
-      <?php foreach ($favorites as $favorite) { ?>
-        <?= $my_this->getGroupSelect($groups,$title,$favorite['favorite_id']) ?>&nbsp;
-        <input type="checkbox" name="delete[<?= $favorite['favorite_id'] ?>]" value="<?= $favorite['xref'] ?>"> 
-        <a class="favorites-menu-<?= $type ?>" href="<?= $favorite['url'] ?>"> <?= $favorite['title'] ?></a><br>
+    <?php foreach ($groups as $title => $group) { ?>
+      <?php if ($title) { ?>
+        <div class="favorites-menu-center">
+          <input type="checkbox" name="shared[<?= $group['md5'] ?>]"
+            <?php if (isset($shared[$group['md5']])) echo 'checked'; ?>
+            value="0"
+            class="favorites-menu-shared" ></div>
+        <div class="favorites-menu-center"><input type="radio" name="active_group" value="<?= $group['id'] ?>" 
+          class="favorites-menu-active"
+          <?php if ($title == $settings['default_group']) echo 'checked'; ?> ></div>
+        <div><input type="text" name="group[<?= $group['id'] ?>]" value="<?= htmlspecialchars($title) ?>" size="60">
+          <?= $group['count'] ?> <?= $item_text ?></div>
       <?php } ?>
     <?php } ?>
-      <div class="favorites-menu-add-link">
-      <?= I18N::translate('Add new link.') ?><br>  
-      <input type="text" name="text[<?= $group['md5'] ?>]" size="30" placeholder="<?= I18N::translate('Text') ?>">
-      <input type="text" name="url[<?= $group['md5'] ?>]" size="30" placeholder="<?= I18N::translate('URL') ?>">
+
+    <div class="favorites-menu-center"><input type="checkbox" name="shared['default']" value="0" 
+      class="favorites-menu-shared favorites-menu-new-group" ></div>
+    <?php if (isset($groups[$settings['default_group']])) { ?>
+      <div class="favorites-menu-center">
+        <input type="radio" name="active_group" value="-1"i
+          class=" favorites-menu-active favorites-menu-new-group"></div>
+      <div><input type="text" name="default_group" value="" size="60"
+         placeholder="<?= I18N::translate('Enter new group') ?>" class="favorites-menu-new-group">
+         <input type="hidden" name="new_group" value="1"></div>
+    <?php } else { ?>
+      <div class="favorites-menu-center">
+        <input type="radio" name="active_group" value="-1" class="favorites-menu-active" checked
+           class="favorites-menu-new-group"></div>
+      <div><input type="text" name="default_group" value="<?= htmlspecialchars($settings['default_group']) ?>"
+         size="60" class="favorites-menu-new-group"></div>
+      <div><input type="hidden" name="new_group" value="0"></div>
+    <?php } ?>
+  </div>
+  <div>
+    <h3 class="favorites-menu-grid-full-row"><?= I18N::translate('Secondary Menu Groups') ?></h3>
+      <div>
+        <?= I18N::translate('Additional groups are listed after default group. They can include groups shared by other users.')  ?>
+      </div>
+
+      <select name="secondary[]" size=10 multiple> 
+       <?php foreach($secondary as $user_group => $title) { ?>
+         <option value="<?= htmlspecialchars($user_group) ?>"
+         <?php if (FALSE !== array_search($user_group,$settings['secondary'])) echo 'selected'; ?> >
+         <?= htmlspecialchars($title) ?>
+         </option>
+       <?php } ?>
+      </select>
+  </div>
+  <br>
+
+
+  <?php foreach ($groups as $title => $group) { ?>
+    <div class='favorites-menu-groups'>
+    <h3 class="favorites-menu-grid-full-row"><?= I18N::translate('Group')?>: <?= $title ? $title : '[ ]' ?></h3>
+    <div><?= I18N::translate('Move') ?></div>
+    <div><?= I18N::translate('Remove') ?></div>
+    <div></div>
+
+    <?php foreach ($group['favorites'] as $type => $favorites) { ?>
+      <?php foreach ($favorites as $id => $favorite) { ?>
+        <div><?= $my_this->getGroupSelect($settings['default_group'],$groups,$title,$favorite['favorite_id']) ?></div>
+        <div class="favorites-menu-center">
+          <input type="checkbox" name="delete[<?= $favorite['favorite_id'] ?>]" value="<?= $favorite['xref'] ?>"> </div>
+        <div>
+          <?php if ($type == 'URL') { ?>
+            <div class="favorites-menu-<?= $type ?>">
+              <input type="text" name="url_title[<?= $id ?>]" size="30" value="<?= htmlspecialchars($favorite['title']) ?>">
+              <input type="text" name="url[<?= $id ?>]" size="30" value="<?= htmlspecialchars($favorite['url']) ?>">
+              <input type="hidden" name="hidden_title[<?= $id ?>]" value="<?= htmlspecialchars($favorite['title']) ?>">
+              <input type="hidden" name="hidden_url[<?= $id ?>]" value="<?= htmlspecialchars($favorite['url']) ?>">
+            </div> 
+          <?php } else { ?>
+            <a class="favorites-menu-<?= $type ?>" href="<?= $favorite['url'] ?>"> <?= $favorite['title'] ?></a>
+          <?php } ?>
+        </div>
+      <?php } ?>
+    <?php } ?>
+
+     <div class="favorites-menu-grid-full-row">
+       <?= I18N::translate('Add new link.') ?><br>  
+        <input type="text" name="text[<?= $group['md5'] ?>]" size="30" placeholder="<?= I18N::translate('Text') ?>">
+        <input type="text" name="url[<?= $group['md5'] ?>]" size="30" placeholder="<?= I18N::translate('URL') ?>">
       </div>
     </div>
-    <br>
   <?php } ?>
+
+<h1><?= I18N::translate('Import/Export') ?></h1>
+  <span> <?= I18N::translate('To export your favorites click') ?></span>
+  <button name='action' type="submit" value='export'><?= I18N::translate('Export') ?></button>
+  <br><br>
+  <span> <?= I18N::translate('To import your favorites, paste the contents of an export .CSV file below and  click') ?></span>
+  <button name='action' type="submit" value='import'><?= I18N::translate('Import') ?></button><br>
+  <textarea name="import" rows=15 cols=60></textarea><br>
+  <span> <?= I18N::translate('The columns are:') ?> gedcom_id, xref, favorite_type, url, title, note</span><br>
+  <span> <?= I18N::translate('Duplicate or invalid entries are ignored.') ?></span><br>
 </form>
 <br>
 </div>
