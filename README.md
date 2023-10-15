@@ -31,6 +31,9 @@ This page allows groups to be renamed and to select the current group.
 It is also possible to move, delete and edit URL links. 
 This is also a basic import/export facility using .CSV files. 
 
+![Sample settings](docs/images/settings.png "Sample settings page")
+
+
 Installation & upgrading
 ------------------------
 * Download and unpack the zip file and place the folder favorites-menu in the modules_v4 folder of webtrees.
