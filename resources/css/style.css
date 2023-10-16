@@ -80,6 +80,9 @@
 .favorites-menu-REPO::before {
   content: "\1f50d";
 }
+.favorites-menu-NOTE::before {
+  content: "\1F4F0";
+}
 .favorites-menu-SOUR::before {
   content: "\0270E";
 }

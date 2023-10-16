@@ -46,7 +46,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
 
     // Module constants
     public const CUSTOM_AUTHOR = 'Bwong789';
-    public const CUSTOM_VERSION = '1.6';
+    public const CUSTOM_VERSION = '1.7';
     public const GITHUB_REPO = 'webtrees-favorites-menu';
 
     public const AUTHOR_WEBSITE = 'https://github.com/bwong789';
@@ -282,6 +282,9 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
           case 'repository':
             $gedcom_type = 'REPO';
             break;
+          case 'note';
+            $gedcom_type = "NOTE";
+            break;
           default:
             $gedcom_type = 'URL';
             break;
@@ -491,7 +494,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
       assert($user_service instanceof UserService);
       foreach($settings['secondary'] as $value) {
         // Do not add if no secondary menu selected.
-        if (',' == $value) {
+        if ((',' == $value) || !str_contains($value,',')) {
           break;
         }
         [$group_user_id, $group] = explode(',', $value, 2);
@@ -884,6 +887,10 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
                       $col_id = 'o_id';
                       $col_tree = 'o_file';
                       break;
+                    case 'NOTE':
+                      $table = 'other';
+                      $col_id = 'o_id';
+                      $col_tree = 'o_file';
                     default:
                       $table = '';
                       $error[] = I18N::translate('Invalid type') . ": $row";
