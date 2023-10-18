@@ -35,7 +35,7 @@
   content: " --";
 }
 
-.wt-genealogy-menu .favorites-menu-group {
+.favorites-menu-group {
   border-top: solid black 2px;
   border-right: solid black 2px;
   border-bottom: solid grey 1px;
@@ -47,7 +47,7 @@
 .favorites-menu-group::after {
   content: "]";
 }
-.wt-genealogy-menu .favorites-menu-first-group {
+.favorites-menu-first-group {
   margin-top: 0px;
 }
 

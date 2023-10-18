@@ -46,7 +46,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
 
     // Module constants
     public const CUSTOM_AUTHOR = 'Bwong789';
-    public const CUSTOM_VERSION = '1.7';
+    public const CUSTOM_VERSION = '1.8';
     public const GITHUB_REPO = 'webtrees-favorites-menu';
 
     public const AUTHOR_WEBSITE = 'https://github.com/bwong789';
@@ -397,7 +397,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
               FlashMessages::addMessage(
                     I18N::translate('Favorite moved to group: ') .
                     "[$default_group]");
-              $my_group = $group;
+              $my_group = $default_group;
               break;
             case 'favorites-menu-true':
               if (!$result) {
@@ -526,9 +526,9 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
     /**
      * Get submenu.
      *
-     * @param array   &$submenu
-     *
      * @param string  $group
+     *
+     * @param array   &$submenu
      *
      * @param integer $user_id
      *
