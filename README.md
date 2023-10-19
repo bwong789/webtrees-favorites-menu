@@ -46,6 +46,19 @@ Most of the icons and images used with the module are contained in the resources
 It is set up for most of the defaults themes but you may need to adjust or override 
 things like background colors for your particular themes. 
 
+Integration with Drupal
+-----------------------
+The [Drupal Webtrees module](https://www.drupal.org/project/webtrees) is another project that I have
+which works with this one. The [Drupal](https://drupal.org) is an open source, content management system (CMS) 
+that can be used in conjuction with Webtrees using the module. The module provides single sign-on (SSO)
+support as well as a Favorites Menu block that works in conjunction with the favorites support of
+this Webtrees module. 
+
+The list of favorites in the menu this Webtrees module manages is avaialable in a Drupal block which
+can be placed on pages within the Drupal website. Combined with the SSO support, it allows a user to 
+move between the two systems with common links for faster navigation. 
+
+Use of this Webtrees module DOES NOT require Drupal support or the use of the Drupal Webtrees module. 
 
 Note
 ----
