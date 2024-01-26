@@ -46,7 +46,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
 
     // Module constants
     public const CUSTOM_AUTHOR = 'Bwong789';
-    public const CUSTOM_VERSION = '1.8';
+    public const CUSTOM_VERSION = '1.9';
     public const GITHUB_REPO = 'webtrees-favorites-menu';
 
     public const AUTHOR_WEBSITE = 'https://github.com/bwong789';
@@ -246,7 +246,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
       $user = Auth::user();
       $user_id = $user->id();
 
-      if (!is_int($user_id)) {
+      if (($user_id == 0) || !is_int($user_id)) {
         return null;
       }
 
@@ -294,7 +294,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
         $gedcom_type = 'URL';
       }
 
-      // Get current favorites setting. 
+      // Get current favorites setting.
       $parameters = explode('&',htmlspecialchars_decode($_SERVER['QUERY_STRING']));
       $args = [];
 
@@ -313,7 +313,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
               break;
           }
         }
-        
+
         $my_favorite_url = $my_url . ($my_parameters ? ('?' . implode('&',$my_parameters)) : '');
 
         $result = DB::table('favorite')
@@ -434,7 +434,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
         }
       }
 
-      // Setup display and url parameter. 
+      // Setup display and url parameter.
       if ($result) {
           if ($default_group != $my_group) {
             $move_args = $args;
@@ -644,7 +644,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
     }
 
     /**
-     * Set setting 
+     * Set setting
      *
      * @param integer $user_id
      * @param string  $name
@@ -696,9 +696,9 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
     }
 
     /**
-     * Generate groups and hashs. 
+     * Generate groups and hashs.
      *
-     * Parameter arrays are cleared and regenerated. 
+     * Parameter arrays are cleared and regenerated.
      *
      * @param integer $user_id
      * @param array   &$favorites
@@ -820,7 +820,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
 
             $rows = explode("\n",$params['import']);
             foreach($rows as $row) {
-              [$gedcom_id, $xref, $favorite_type, $url, $title, $note] = 
+              [$gedcom_id, $xref, $favorite_type, $url, $title, $note] =
                 array_merge(
                   array_map(
                     fn($x) => trim(htmlspecialchars_decode($x)),
@@ -838,7 +838,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
                 $trees[$gedcom->gedcom_id] = $gedcom->gedcom_name;
               }
 
-              // Ignore lines without a tree number. 
+              // Ignore lines without a tree number.
               if (is_numeric($gedcom_id)) {
                 if (isset($trees[$gedcom_id])) {
                   switch($favorite_type) {
@@ -860,7 +860,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
                           'note' => $note,
                         ]);
                         $added[] = $row;
-                      }                      
+                      }
                       break;
                     case 'INDI':
                       $table = "individuals";
@@ -974,7 +974,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
           if (isset($params['url'])) {
             $url_updates = [];
             foreach($params['url'] as $favorite_id => $url) {
-              // Make sure text is there. Ignore if blank. Both fields must be set. 
+              // Make sure text is there. Ignore if blank. Both fields must be set.
               if (isset($params['url_title'][$favorite_id])) {
                 if (  ($params['url'][$favorite_id] != $params['hidden_url'][$favorite_id])
                    || ($params['url_title'][$favorite_id] != $params['hidden_title'][$favorite_id])) {
@@ -1023,7 +1023,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
 
           // Handle default group rename.
           if ($params['rename_default']) {
-            // Blank and null are the default group. 
+            // Blank and null are the default group.
             DB::table('favorite')
               ->where('gedcom_id', '=', $tree->id())
               ->where('user_id', '=', $user_id)
@@ -1038,7 +1038,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
               $active_group = $params['rename_default'];
             }
           }
- 
+
           // Make any group name changes.
           if (isset($params['group'])) {
             foreach ($params['group'] as $id => $group) {
@@ -1091,7 +1091,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
             foreach($params['delete'] as $favorite_id => $xref) {
               $deleted[$favorite_id] = $favorites[$favorite_id]['title'];
 
-              // Remove from favorite. $xref ignored since it is empty for URLs. 
+              // Remove from favorite. $xref ignored since it is empty for URLs.
               DB::table('favorite')
                 ->where('gedcom_id', '=', $tree->id())
                 ->where('user_id', '=', $user_id)
@@ -1164,7 +1164,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
           }
 
           if ($regenerate) {
-            // Regenerate arrays that have now changed. 
+            // Regenerate arrays that have now changed.
             $this->generateGroups($user_id, $favorites, $groups, $hash);
           }
 
@@ -1237,7 +1237,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
      * @param string $id
      *
      * @return string
-     *   String with HTML select definition. 
+     *   String with HTML select definition.
      */
     public function getGroupSelect($default_group,$groups,$current_group,$id) {
       $options[] = '<option value>-- ' . I18N::translate('Move to') . ' --</option>';
