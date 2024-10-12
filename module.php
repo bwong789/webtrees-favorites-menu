@@ -566,10 +566,12 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
      *
      * @return string
      */
+/* css/style.css was removed
     public function headContent(): string
     {
         return '<link rel="stylesheet" href="' . e($this->assetUrl('css/style.css')) . '">';
     }
+*/
 
     /**
      * User settings.
