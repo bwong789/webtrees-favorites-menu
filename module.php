@@ -1034,7 +1034,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
               ->where('user_id', '=', $user_id)
               ->where('note', '=', null)
               ->update(['note' => $params['rename_default']]);
-            if (!$settings[default_group]) {
+            if (!$settings['default_group']) {
               $active_group = $params['rename_default'];
             }
           }

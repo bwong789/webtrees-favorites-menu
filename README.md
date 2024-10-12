@@ -6,7 +6,7 @@ Description
 This exposes the Webtrees Favorites list as a menu item. It is displayed on all non-admin pages. 
 It provides a bookmark-like facility to make it easier to mark items and find them later. 
 It works with most Webtrees pages including individuals, families and media. Other
-pages can be marked as named links.
+pages can be marked as named links. Note: URL rewrite must be turned on (rewrite_urls="1"). 
 
 ![Sample menu](docs/images/sample.png "Sample menu")
 
