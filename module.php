@@ -46,7 +46,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
 
     // Module constants
     public const CUSTOM_AUTHOR = 'Bwong789';
-    public const CUSTOM_VERSION = '1.10';
+    public const CUSTOM_VERSION = '1.11';
     public const GITHUB_REPO = 'webtrees-favorites-menu';
 
     public const AUTHOR_WEBSITE = 'https://github.com/bwong789';
@@ -199,17 +199,24 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
             'gedcom_id' => '',
           ];
         } elseif ($favorite->xref) {
-          $favorite_tree = $tree_service->find(intval($favorite->gedcom_id));
-          $gedcom = Registry::gedcomRecordFactory()->make($favorite->xref, $favorite_tree);
-          $result[$favorite->favorite_id] = [
-            'favorite_id' => $favorite->favorite_id,
-            'title' => $gedcom->fullName(),
-            'type' => $ftype,
-            'url' => $gedcom->url(),
-            'group' => $favorite->note ? $favorite->note : '',
-            'xref' => $favorite->xref,
-            'gedcom_id' => $favorite->gedcom_id,
-            ];
+          // Check if tree is accessible.
+          $id = intval($favorite->gedcom_id);
+          $favorite_tree = $tree_service->all()->first(
+            static function (Tree $tree) use ($id): bool {
+              return $tree->id() === $id;
+            });
+          if ($favorite_tree instanceof Tree) {
+            $gedcom = Registry::gedcomRecordFactory()->make($favorite->xref, $favorite_tree);
+            $result[$favorite->favorite_id] = [
+              'favorite_id' => $favorite->favorite_id,
+              'title' => $gedcom->fullName(),
+              'type' => $ftype,
+              'url' => $gedcom->url(),
+              'group' => $favorite->note ? $favorite->note : '',
+              'xref' => $favorite->xref,
+              'gedcom_id' => $favorite->gedcom_id,
+              ];
+          }
         } else {
           FlashMessages::addMessage(
               I18N::translate('Null xref for %s', $favorite->favorite_id));
@@ -246,8 +253,20 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
       $user = Auth::user();
       $user_id = $user->id();
 
-      if (($user_id == 0) || !is_int($user_id)) {
-        return null;
+      if ((!is_int($user_id)) || 0 == $user_id) {
+        // handle anonymous_user
+        $anonymous = DB::table('user')
+            ->where('user_name', '=', 'anonymous_user')
+            ->get()
+            ->all();
+
+        if (!$anonymous) {
+          // exit if no anonymous_user defined
+          return null;
+        }
+        $user_id = $anonymous[0]->user_id;
+      } else {
+        $anonymous = [];
       }
 
       $settings = $this->getSettings($user_id);
@@ -294,8 +313,10 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
         $gedcom_type = 'URL';
       }
 
-      // Get current favorites setting.
-      $parameters = explode('&',htmlspecialchars_decode($_SERVER['QUERY_STRING']));
+      // Get current favorites setting. Ignore if anonymous_user
+      $parameters = $anonymous
+        ? []
+        : explode('&',htmlspecialchars_decode($_SERVER['QUERY_STRING']));
       $args = [];
 
       if ($gedcom_type == 'URL') {
@@ -436,20 +457,20 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
 
       // Setup display and url parameter.
       if ($result) {
-          if ($default_group != $my_group) {
-            $move_args = $args;
-            $move_args[] = 'favorites-menu-move';
-            $move_args = '?' . implode('&',$move_args);
-          }
-          $class = 'favorites-menu-true';
-          $prefix = '&#9745; '; // '[*] ';
-          $args[] = 'favorites-menu-false';
-          $action = I18N::translate('Remove favorite');
+        if ($default_group != $my_group) {
+          $move_args = $args;
+          $move_args[] = 'favorites-menu-move';
+          $move_args = '?' . implode('&',$move_args);
+        }
+        $class = 'favorites-menu-true';
+        $prefix = '&#9745; '; // '[*] ';
+        $args[] = 'favorites-menu-false';
+        $action = I18N::translate('Remove favorite');
       } else {
-          $class = 'favorites-menu-false';
-          $prefix = '&#9744; '; // '[ ] ';
-          $args[] = 'favorites-menu-true';
-          $action = I18N::translate('Add favorite');
+        $class = 'favorites-menu-false';
+        $prefix = '&#9744; '; // '[ ] ';
+        $args[] = 'favorites-menu-true';
+        $action = I18N::translate('Add favorite');
       }
 
       // Generate parameters.
@@ -470,10 +491,10 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
 
       $submenu[] = new Menu(
          htmlspecialchars($default_group),
-         e( "$url_prefix/tree/$tree_name/favorites-menu"),
+         $anonymous ? '' : e( "$url_prefix/tree/$tree_name/favorites-menu"),
          "favorites-menu-first-group favorites-menu-group favorites-menu-item");
 
-      if ($action) {
+      if ($action && !$anonymous) {
         $submenu[] = new Menu(
           I18N::translate($action),
           e("$my_url$args"),
@@ -511,7 +532,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
                  ($group_user_id != $user_id ?
                   ' @ ' . $group_user->realName() :
                   '')),
-               e( "$url_prefix/tree/$tree_name/favorites-menu"),
+               $anonymous ? '' : e( "$url_prefix/tree/$tree_name/favorites-menu"),
                "favorites-menu-group favorites-menu-item");
             $this->getSubmenu($group, $submenu, $group_user_id, $tree_id);
           }
@@ -566,12 +587,10 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
      *
      * @return string
      */
-/* css/style.css was removed
     public function headContent(): string
     {
         return '<link rel="stylesheet" href="' . e($this->assetUrl('css/style.css')) . '">';
     }
-*/
 
     /**
      * User settings.
@@ -1036,7 +1055,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
               ->where('user_id', '=', $user_id)
               ->where('note', '=', null)
               ->update(['note' => $params['rename_default']]);
-            if (!$settings['default_group']) {
+            if (!$settings[default_group]) {
               $active_group = $params['rename_default'];
             }
           }

@@ -6,7 +6,7 @@ Description
 This exposes the Webtrees Favorites list as a menu item. It is displayed on all non-admin pages. 
 It provides a bookmark-like facility to make it easier to mark items and find them later. 
 It works with most Webtrees pages including individuals, families and media. Other
-pages can be marked as named links. Note: URL rewrite must be turned on (rewrite_urls="1"). 
+pages can be marked as named links.
 
 ![Sample menu](docs/images/sample.png "Sample menu")
 
@@ -39,6 +39,19 @@ Installation & upgrading
 * Download and unpack the zip file and place the folder favorites-menu in the modules_v4 folder of webtrees.
 * Upload the newly added folder to your server. It is activated by default.
 * Go to the control panel, click in the module section on 'Menus' where you can find the newly added menu item.
+
+Anonymous User
+--------------
+By default, the favorites menu will not be displayed for an anonymous user.
+
+It is possible to create a favorites menu for anonymous users but they will not be
+able to make modificiations. They will only be able to see menu items that they can access. 
+
+To enable this feature, create a user named anonymous_user. Log in and add to the
+favorites menu. This can include shared items. Test access to the menu by logging out.
+Note the removal of the ability to add and remove a favorite. 
+
+To disable this feature, delete the anonymous_user.
 
 Customization
 -------------
