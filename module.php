@@ -6,6 +6,7 @@ namespace favorites_menu\Webtrees\Module\FavoritesMenu;
 
 use Fig\Http\Message\StatusCodeInterface;
 
+use Fisharebest\Webtrees\Webtrees;
 use Fisharebest\Webtrees\Auth;
 use Fisharebest\Webtrees\I18N;
 use Fisharebest\Webtrees\Menu;
@@ -28,8 +29,6 @@ use Fisharebest\Webtrees\Module\ModuleGlobalTrait;
 use Fisharebest\Webtrees\Module\ModuleGlobalInterface;
 use Fisharebest\Webtrees\Module\ModuleConfigInterface;
 use Fisharebest\Webtrees\Module\ModuleCustomInterface;
-use Fisharebest\Webtrees\Module\UserFavoritesModule;
-use Fisharebest\Webtrees\Http\RequestHandlers\ModulesMenusAction;
 use Illuminate\Database\Capsule\Manager as DB;
 use Fig\Http\Message\RequestMethodInterface;
 
@@ -46,11 +45,20 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
 
     // Module constants
     public const CUSTOM_AUTHOR = 'Bwong789';
-    public const CUSTOM_VERSION = '1.11';
+    public const CUSTOM_VERSION = '1.12';
     public const GITHUB_REPO = 'webtrees-favorites-menu';
 
     public const AUTHOR_WEBSITE = 'https://github.com/bwong789';
     public const CUSTOM_SUPPORT_URL = 'https://github.com/bwong789/webtrees-favorites-menu/issues';
+
+    // Class variables
+    private $tree_service;
+    private $user_service;
+
+    public function __construct() {
+      $this->tree_service = Webtrees::VERSION < '2.2' ? app(TreeService::class) : Registry::container()->get(TreeService::class);
+      $this->user_service = Webtrees::VERSION < '2.2' ? app(UserService::class) : Registry::container()->get(UserService::class);
+    }
 
     /**
      * How should this module be identified in the control panel, etc.?
@@ -176,9 +184,6 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
 
       // Get favorites.
       $result = [];
-      $tree_service = app(TreeService::class);
-      assert($tree_service instanceof TreeService);
-
       $favorites = DB::table('favorite')
             ->where('user_id', '=', $user_id)
             ->get()
@@ -201,7 +206,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
         } elseif ($favorite->xref) {
           // Check if tree is accessible.
           $id = intval($favorite->gedcom_id);
-          $favorite_tree = $tree_service->all()->first(
+          $favorite_tree = $this->tree_service->all()->first(
             static function (Tree $tree) use ($id): bool {
               return $tree->id() === $id;
             });
@@ -511,8 +516,6 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
       $this->getSubmenu($default_group, $submenu, $user_id, $tree_id);
 
       // Add secondary menus.
-      $user_service = app(UserService::class);
-      assert($user_service instanceof UserService);
       foreach($settings['secondary'] as $value) {
         // Do not add if no secondary menu selected.
         if ((',' == $value) || !str_contains($value,',')) {
@@ -524,7 +527,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
           $groups = [];
           $hash = [];
           $this->generateGroups($group_user_id, $favorites, $groups, $hash);
-          $group_user = $user_service->find(intval($group_user_id));
+          $group_user = $this->user_service->find(intval($group_user_id));
 
           if (isset($groups[$group])) {
             $submenu[] = new Menu(
@@ -836,9 +839,6 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
             $added = [];
             $error = [];
             $duplicate = [];
-            $tree_service = app(TreeService::class);
-            assert($tree_service instanceof TreeService);
-
             $rows = explode("\n",$params['import']);
             foreach($rows as $row) {
               [$gedcom_id, $xref, $favorite_type, $url, $title, $note] =
@@ -946,7 +946,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
                           'note' => $note,
                         ]);
 
-                        $my_tree = $tree_service->find(intval($gedcom_id));
+                        $my_tree = $this->tree_service->find(intval($gedcom_id));
                         $gedcom = Registry::gedcomRecordFactory()->make($xref, $my_tree);
                         $added[] = $gedcom->fullName() . " == $row";
                       } else {
@@ -1210,12 +1210,9 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
           ->toArray();
 
       if ($result) {
-        $user_service = app(UserService::class);
-        assert($user_service instanceof UserService);
-
         $extra = [];
         foreach($result as $row) {
-          $check_user = $user_service->find(intval($row->user_id));
+          $check_user = $this->user_service->find(intval($row->user_id));
           if ($check_user) {
             foreach(unserialize($row->setting_value) as $group) {
              $extra["$row->user_id,$group"] = $check_user->realName() . ' -- '.

@@ -36,6 +36,11 @@ This is also a basic import/export facility using .CSV files.
 
 Installation & upgrading
 ------------------------
+* This modules currently requires [Pretty URL](https://webtrees.net/faq/urls/) support.
+Add the following line in /data/config.ini.php
+```
+rewrite_urls="1"
+```
 * Download and unpack the zip file and place the folder favorites-menu in the modules_v4 folder of webtrees.
 * Upload the newly added folder to your server. It is activated by default.
 * Go to the control panel, click in the module section on 'Menus' where you can find the newly added menu item.
