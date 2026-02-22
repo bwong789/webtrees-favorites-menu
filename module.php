@@ -61,6 +61,16 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
     }
 
     /**
+     * Get current path segments.
+     *
+     * @return array
+     */
+    public function getPath(): array
+    {
+      return explode('/', trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/'));
+    }
+
+    /**
      * How should this module be identified in the control panel, etc.?
      *
      * @return string
@@ -171,16 +181,8 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
      *   Array of arrays with keys: group, title, type, url.
      */
     public function getFavorites($user_id):array {
-      $uri = $_SERVER['REQUEST_URI'];
-      $path = explode('/',$uri);
+      $path = $this->getPath();
       $tree_index = array_search('tree',$path);
-
-      $path_prefix = array_slice($path,0,$tree_index);
-      if ($path_prefix) {
-        $url_prefix = implode('/',array_slice($path,0,$tree_index));
-      } else {
-        $url_prefix = '';
-      }
 
       // Get favorites.
       $result = [];
@@ -280,9 +282,8 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
       $tree_id = $tree->id();
 
       // Make sure tree exists.
-      $uri = $_SERVER['REQUEST_URI'];
-      $my_url = explode('?',$uri)[0];
-      $path = explode('/',$my_url);
+      $path = $this->getPath();
+      $my_url = '/' . implode("/", $path);
       $tree_index = array_search('tree',$path);
       if (FALSE === $tree_index) {
         return null;
@@ -319,15 +320,13 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
       }
 
       // Get current favorites setting. Ignore if anonymous_user
-      $parameters = $anonymous
-        ? []
-        : explode('&',htmlspecialchars_decode($_SERVER['QUERY_STRING']));
+      $parameters = $anonymous ? [] : $_GET;
       $args = [];
 
       if ($gedcom_type == 'URL') {
         // Generate URI.
         $my_parameters = [];
-        foreach($parameters as $parameter) {
+        foreach($parameters as $parameter => $value) {
           switch ($parameter) {
             case 'favorites-menu-move':
             case 'favorites-menu-false':
@@ -351,8 +350,8 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
             ->toArray();
 
         $my_group = $result ? $result[0]->note : '';
-        foreach ($parameters as $i => $value) {
-          switch ($value) {
+        foreach ($parameters as $parameter => $value) {
+          switch ($parameter) {
             case 'favorites-menu-move':
               // Change group
               DB::table('favorite')
@@ -393,10 +392,10 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
               break;
             case '':
               // Clean up any empty parameters.
-              unset($parameters[$i]);
+              unset($parameters[$parameter]);
               break;
             default:
-              $args[] = $value;
+              $args[] = "$parameter=$value";
               break;
           }
         }
@@ -410,8 +409,8 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
             ->toArray();
 
         $my_group = $result ? $result[0]->note : '';
-        foreach ($parameters as $i => $value) {
-          switch ($value) {
+        foreach ($parameters as $parameter => $value) {
+          switch ($parameter) {
             case 'favorites-menu-move':
               // Change group
               DB::table('favorite')
@@ -451,10 +450,10 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
               break;
             case '':
               // Clean up any empty parameters.
-              unset($parameters[$i]);
+              unset($parameters[$parameter]);
               break;
             default:
-              $args[] = $value;
+              $args[] = "$parameter=$value";
               break;
           }
         }
@@ -489,7 +488,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
       // Generate submenu.
       $path_prefix = array_slice($path,0,$tree_index);
       if ($path_prefix) {
-        $url_prefix = implode('/',array_slice($path,0,$tree_index));
+        $url_prefix = '/' . implode('/',array_slice($path,0,$tree_index));
       } else {
         $url_prefix = '';
       }
@@ -578,7 +577,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
     /**
      * Get the url slug for this page
      */
-    public function getSlug($string): String
+    public function getSlug($string): string
     {
         return preg_replace('/\s+/', '-', strtolower(preg_replace("/&([a-z])[a-z]+;/i", "$1", htmlentities($string))));
     }
