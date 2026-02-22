@@ -56,8 +56,13 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
     private $user_service;
 
     public function __construct() {
-      $this->tree_service = Webtrees::VERSION < '2.2' ? app(TreeService::class) : Registry::container()->get(TreeService::class);
-      $this->user_service = Webtrees::VERSION < '2.2' ? app(UserService::class) : Registry::container()->get(UserService::class);
+      if (version_compare(Webtrees::VERSION, '2.2', '<')) {
+        $this->tree_service = app(TreeService::class);
+        $this->user_service = app(UserService::class);
+      } else {
+        $this->tree_service = Registry::container()->get(TreeService::class);
+        $this->user_service = Registry::container()->get(UserService::class);
+      }
     }
 
     /**
@@ -363,7 +368,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
               FlashMessages::addMessage(
                     I18N::translate('Favorite moved to group: ') .
                     "[$default_group]");
-              $my_group = $group;
+              $my_group = $default_group;
               break;
             case 'favorites-menu-true':
               if (!$result) {
@@ -1054,7 +1059,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
               ->where('user_id', '=', $user_id)
               ->where('note', '=', null)
               ->update(['note' => $params['rename_default']]);
-            if (!$settings[default_group]) {
+            if (!$settings['default_group']) {
               $active_group = $params['rename_default'];
             }
           }
