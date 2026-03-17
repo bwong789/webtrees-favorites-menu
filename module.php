@@ -514,7 +514,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
       if ($action && !$anonymous) {
         $submenu[] = new Menu(
           I18N::translate($action),
-          e("$my_url$args"),
+          e($my_url) . $args,
           $class . '-item favorites-menu-action favorites-menu-item');
         if (isset($move_args)) {
           $submenu[] = new Menu(
@@ -578,7 +578,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
           if (($type == $favorite['type']) && ($group == $favorite['group'])) {
             $submenu[] = new Menu(
               $favorite['title'],
-              e($favorite['url']),
+              $favorite['url'],
               "favorites-menu-$type favorites-menu-item" .
                 ($favorite['gedcom_id'] && ($favorite['gedcom_id'] != $tree_id) ?
                  ' favorites-menu-other-tree' :
