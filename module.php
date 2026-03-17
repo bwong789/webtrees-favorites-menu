@@ -511,7 +511,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
          $anonymous ? '' : e( "$url_prefix/tree/$tree_name/favorites-menu"),
          "favorites-menu-first-group favorites-menu-group favorites-menu-item");
 
-      if ($action && !$anonymous) {
+      if ($action && !$anonymous && strlen(e($my_url) . $args) < 256) {
         $submenu[] = new Menu(
           I18N::translate($action),
           e($my_url) . $args,
