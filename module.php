@@ -337,12 +337,12 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
             case '':
               break;
             default:
-              $my_parameters[] = $parameter;
+              $my_parameters[$parameter] = $value;
               break;
           }
         }
 
-        $my_favorite_url = $my_url . ($my_parameters ? ('?' . implode('&',$my_parameters)) : '');
+        $my_favorite_url = $my_url . ($my_parameters ? ('?' . http_build_query($my_parameters)) : '');
 
         $result = DB::table('favorite')
             ->where('gedcom_id', '=', $tree->id())
