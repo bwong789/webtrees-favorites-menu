@@ -333,18 +333,16 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
         $my_parameters = [];
         foreach($parameters as $parameter => $value) {
           switch ($parameter) {
-            case 'favorites-menu-move':
-            case 'favorites-menu-false':
-            case 'favorites-menu-true':
+            case 'favorites-menu':
             case '':
               break;
             default:
-              $my_parameters[] = $parameter;
+              $my_parameters[$parameter] = $value;
               break;
           }
         }
 
-        $my_favorite_url = $my_url . ($my_parameters ? ('?' . implode('&',$my_parameters)) : '');
+        $my_favorite_url = $my_url . ($my_parameters ? ('?' . http_build_query($my_parameters)) : '');
 
         $result = DB::table('favorite')
             ->where('gedcom_id', '=', $tree->id())
@@ -357,50 +355,55 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
         $my_group = $result ? $result[0]->note : '';
         foreach ($parameters as $parameter => $value) {
           switch ($parameter) {
-            case 'favorites-menu-move':
-              // Change group
-              DB::table('favorite')
-                    ->where('gedcom_id', '=', $tree->id())
-                    ->where('user_id', '=', $user_id)
-                    ->where('favorite_type', '=', 'URL')
-                    ->where('url', '=', $my_favorite_url)
-                    ->update(['note' => ($default_group ? $default_group : null)]);
-              FlashMessages::addMessage(
-                    I18N::translate('Favorite moved to group: ') .
-                    "[$default_group]");
-              $my_group = $default_group;
-              break;
-            case 'favorites-menu-true':
-              if (!$result) {
-                // Add to favorites.
-                DB::table('favorite')->insert([
-                    'gedcom_id' => $tree->id(),
-                    'user_id' => $user_id,
-                    'favorite_type' => 'URL',
-                    'url' => $my_favorite_url,
-                    'title' => implode(' ',array_slice($path, $tree_index + 2)),
-                    'note' => ($default_group ? $default_group : null)]);
-                $result = TRUE;
+            case 'favorites-menu':
+              switch ($value) {
+                case 'move':
+                  // Change group
+                  DB::table('favorite')
+                      ->where('gedcom_id', '=', $tree->id())
+                      ->where('user_id', '=', $user_id)
+                      ->where('favorite_type', '=', 'URL')
+                      ->where('url', '=', $my_favorite_url)
+                      ->update(['note' => ($default_group ? $default_group : null)]);
+                  FlashMessages::addMessage(
+                      I18N::translate('Favorite moved to group: ') .
+                      "[$default_group]");
+                  $my_group = $default_group;
+                  break;
+                case 'true':
+                  if (!$result) {
+                    // Add to favorites.
+                    DB::table('favorite')->insert([
+                        'gedcom_id' => $tree->id(),
+                        'user_id' => $user_id,
+                        'favorite_type' => 'URL',
+                        'url' => $my_favorite_url,
+                        'title' => implode(' ',array_slice($path, $tree_index + 2)),
+                        'note' => ($default_group ? $default_group : null)]);
+                    $result = TRUE;
+                  }
+                  break;
+                case 'false':
+                  if ($result) {
+                    // Remove from favorites.
+                    DB::table('favorite')
+                        ->where('gedcom_id', '=', $tree->id())
+                        ->where('user_id', '=', $user_id)
+                        ->where('favorite_type', '=', 'URL')
+                        ->where('url', '=', $my_favorite_url)
+                        ->delete();
+                    $result = FALSE;
+                  }
+                  break;
+                default:
+                  break;
               }
-              break;
-            case 'favorites-menu-false':
-              if ($result) {
-                // Remove from favorites.
-                DB::table('favorite')
-                    ->where('gedcom_id', '=', $tree->id())
-                    ->where('user_id', '=', $user_id)
-                    ->where('favorite_type', '=', 'URL')
-                    ->where('url', '=', $my_favorite_url)
-                    ->delete();
-                $result = FALSE;
-              }
-              break;
             case '':
               // Clean up any empty parameters.
               unset($parameters[$parameter]);
               break;
             default:
-              $args[] = "$parameter=$value";
+              $args[$parameter] = $value;
               break;
           }
         }
@@ -416,49 +419,54 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
         $my_group = $result ? $result[0]->note : '';
         foreach ($parameters as $parameter => $value) {
           switch ($parameter) {
-            case 'favorites-menu-move':
-              // Change group
-              DB::table('favorite')
-                    ->where('gedcom_id', '=', $tree->id())
-                    ->where('user_id', '=', $user_id)
-                    ->where('favorite_type', '=', $gedcom_type)
-                    ->where('xref', '=', $xref)
-                    ->update(['note' => ($default_group ? $default_group : null)]);
-              FlashMessages::addMessage(
-                    I18N::translate('Favorite moved to group: ') .
-                    "[$default_group]");
-              $my_group = $default_group;
-              break;
-            case 'favorites-menu-true':
-              if (!$result) {
-                // Add to favorites.
-                DB::table('favorite')->insert([
-                    'gedcom_id' => $tree->id(),
-                    'user_id' => $user_id,
-                    'favorite_type' => $gedcom_type,
-                    'xref' => $xref,
-                    'note' => ($default_group ? $default_group : null)]);
-                $result = TRUE;
+            case 'favorites-menu':
+              switch ($value) {
+                case 'move':
+                  // Change group
+                  DB::table('favorite')
+                      ->where('gedcom_id', '=', $tree->id())
+                      ->where('user_id', '=', $user_id)
+                      ->where('favorite_type', '=', $gedcom_type)
+                      ->where('xref', '=', $xref)
+                      ->update(['note' => ($default_group ? $default_group : null)]);
+                  FlashMessages::addMessage(
+                      I18N::translate('Favorite moved to group: ') .
+                      "[$default_group]");
+                  $my_group = $default_group;
+                  break;
+                case 'true':
+                  if (!$result) {
+                    // Add to favorites.
+                    DB::table('favorite')->insert([
+                        'gedcom_id' => $tree->id(),
+                        'user_id' => $user_id,
+                        'favorite_type' => $gedcom_type,
+                        'xref' => $xref,
+                        'note' => ($default_group ? $default_group : null)]);
+                    $result = TRUE;
+                  }
+                  break;
+                case 'false':
+                  if ($result) {
+                    // Remove from favorites.
+                    DB::table('favorite')
+                        ->where('gedcom_id', '=', $tree->id())
+                        ->where('user_id', '=', $user_id)
+                        ->where('favorite_type', '=', $gedcom_type)
+                        ->where('xref', '=', $xref)
+                        ->delete();
+                    $result = FALSE;
+                  }
+                  break;
+                default:
+                  break;
               }
-              break;
-            case 'favorites-menu-false':
-              if ($result) {
-                // Remove from favorites.
-                DB::table('favorite')
-                    ->where('gedcom_id', '=', $tree->id())
-                    ->where('user_id', '=', $user_id)
-                    ->where('favorite_type', '=', $gedcom_type)
-                    ->where('xref', '=', $xref)
-                    ->delete();
-                $result = FALSE;
-              }
-              break;
             case '':
               // Clean up any empty parameters.
               unset($parameters[$parameter]);
               break;
             default:
-              $args[] = "$parameter=$value";
+              $args[$parameter] = $value;
               break;
           }
         }
@@ -468,23 +476,23 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
       if ($result) {
         if ($default_group != $my_group) {
           $move_args = $args;
-          $move_args[] = 'favorites-menu-move';
-          $move_args = '?' . implode('&',$move_args);
+          $move_args['favorites-menu'] = 'move';
+          $move_args = '?' . http_build_query($move_args);
         }
         $class = 'favorites-menu-true';
         $prefix = '&#9745; '; // '[*] ';
-        $args[] = 'favorites-menu-false';
+        $args['favorites-menu'] = 'false';
         $action = I18N::translate('Remove favorite');
       } else {
         $class = 'favorites-menu-false';
         $prefix = '&#9744; '; // '[ ] ';
-        $args[] = 'favorites-menu-true';
+        $args['favorites-menu'] = 'true';
         $action = I18N::translate('Add favorite');
       }
 
       // Generate parameters.
       if ($args) {
-        $args = '?' . implode('&',$args);
+        $args = '?' . http_build_query($args);
       } else {
         $args = '';
       }
@@ -503,10 +511,10 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
          $anonymous ? '' : e( "$url_prefix/tree/$tree_name/favorites-menu"),
          "favorites-menu-first-group favorites-menu-group favorites-menu-item");
 
-      if ($action && !$anonymous) {
+      if ($action && !$anonymous && strlen(e($my_url) . $args) < 256) {
         $submenu[] = new Menu(
           I18N::translate($action),
-          e("$my_url$args"),
+          e($my_url) . $args,
           $class . '-item favorites-menu-action favorites-menu-item');
         if (isset($move_args)) {
           $submenu[] = new Menu(
@@ -570,7 +578,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
           if (($type == $favorite['type']) && ($group == $favorite['group'])) {
             $submenu[] = new Menu(
               $favorite['title'],
-              e($favorite['url']),
+              $favorite['url'],
               "favorites-menu-$type favorites-menu-item" .
                 ($favorite['gedcom_id'] && ($favorite['gedcom_id'] != $tree_id) ?
                  ' favorites-menu-other-tree' :
