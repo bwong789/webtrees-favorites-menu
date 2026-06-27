@@ -45,7 +45,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
 
     // Module constants
     public const CUSTOM_AUTHOR = 'Bwong789';
-    public const CUSTOM_VERSION = '1.12';
+    public const CUSTOM_VERSION = '1.16';
     public const GITHUB_REPO = 'webtrees-favorites-menu';
 
     public const AUTHOR_WEBSITE = 'https://github.com/bwong789';
@@ -587,6 +587,7 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
         }
       }
     }
+
     /**
      * Get the url slug for this page
      */
@@ -595,7 +596,20 @@ return new class extends AbstractModule implements ModuleCustomInterface, Module
         return preg_replace('/\s+/', '-', strtolower(preg_replace("/&([a-z])[a-z]+;/i", "$1", htmlentities($string))));
     }
 
-
+    /**
+     * Additional/updated translations.
+     *
+     * @param string $language
+     *
+     * @return array<string>
+     */
+    public function customTranslations(string $language): array
+    {
+        $file = $this->resourcesFolder() . 'lang/' . $language . '.php';
+        
+        return file_exists($file) ? (new Translation($file))->asArray() : [];
+    }
+    
     /**
      * Raw content, to be added at the end of the <head> element.
      * Typically, this will be <link> and <meta> elements.
